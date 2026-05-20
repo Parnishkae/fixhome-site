@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="РемонтПро — современный ремонт квартир и домов под ключ. Качество, гарантия, прозрачные цены. Бесплатный выезд замерщика.">
+    <meta name="keywords" content="ремонт квартир, ремонт домов, отделка, ремонт под ключ, евроремонт">
+    <title>РемонтПро — Ремонт квартир и домов под ключ</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ===== HEADER ===== -->
+    <header class="header" id="header">
+        <div class="container header__inner">
+            <a href="index.html" class="logo">
+                <span class="logo__mark">R</span>
+                <span class="logo__text">РемонтПро</span>
+            </a>
+
+            <nav class="nav" id="nav">
+                <ul class="nav__list">
+                    <li><a href="index.html" class="nav__link active">Главная</a></li>
+                    <li><a href="services.html" class="nav__link">Услуги</a></li>
+                    <li><a href="about.html" class="nav__link">О нас</a></li>
+                    <li><a href="contacts.html" class="nav__link">Контакты</a></li>
+                </ul>
+                <a href="#contact" class="btn btn--primary nav__cta">Оставить заявку</a>
+            </nav>
+
+            <button class="burger" id="burger" aria-label="Открыть меню">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- ===== HERO ===== -->
+        <section class="hero">
+            <div class="hero__bg"></div>
+            <div class="container hero__inner">
+                <div class="hero__content reveal">
+                    <span class="hero__badge">Опыт более 12 лет</span>
+                    <h1 class="hero__title">
+                        Ремонт квартир <br>
+                        <span class="accent">под ключ</span>
+                    </h1>
+                    <p class="hero__text">
+                        Создаём интерьеры, в которых хочется жить. Прозрачные цены,
+                        фиксированные сроки и гарантия на все работы — 5 лет.
+                    </p>
+                    <div class="hero__actions">
+                        <a href="#contact" class="btn btn--primary">Оставить заявку</a>
+                        <a href="services.html" class="btn btn--ghost">Наши услуги →</a>
+                    </div>
+
+                    <div class="hero__stats">
+                        <div class="hero__stat">
+                            <span class="hero__stat-num">350+</span>
+                            <span class="hero__stat-label">завершённых объектов</span>
+                        </div>
+                        <div class="hero__stat">
+                            <span class="hero__stat-num">12</span>
+                            <span class="hero__stat-label">лет на рынке</span>
+                        </div>
+                        <div class="hero__stat">
+                            <span class="hero__stat-num">5</span>
+                            <span class="hero__stat-label">лет гарантии</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ABOUT SHORT ===== -->
+        <section class="section about-short">
+            <div class="container">
+                <div class="about-short__grid">
+                    <div class="about-short__text reveal">
+                        <span class="eyebrow">О компании</span>
+                        <h2 class="section__title">Мы делаем ремонт честно</h2>
+                        <p class="lead">
+                            РемонтПро — команда из 28 мастеров и 4 прорабов.
+                            Мы работаем только по официальному договору с фиксированной
+                            сметой. Без скрытых платежей и удорожаний по ходу работ.
+                        </p>
+                        <a href="about.html" class="link-arrow">Подробнее о нас →</a>
+                    </div>
+                    <div class="about-short__image reveal">
+                        <div class="image-card image-card--1"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ADVANTAGES ===== -->
+        <section class="section advantages">
+            <div class="container">
+                <div class="section__head reveal">
+                    <span class="eyebrow">Почему мы</span>
+                    <h2 class="section__title">Преимущества работы с нами</h2>
+                </div>
+
+                <div class="advantages__grid">
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
+                                <path d="M9 12l2 2 4-4"/>
+                            </svg>
+                        </div>
+                        <h3>Гарантия 5 лет</h3>
+                        <p>На все выполненные работы. Договор и фиксированная смета.</p>
+                    </div>
+
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <h3>Точные сроки</h3>
+                        <p>Сдаём объект день в день. За каждый день просрочки — компенсация.</p>
+                    </div>
+
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <h3>Прозрачная цена</h3>
+                        <p>Стоимость фиксируется в смете и не меняется в процессе работ.</p>
+                    </div>
+
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 7h-3V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H4v13h16V7z"/>
+                                <path d="M9 7V5h6v2"/>
+                            </svg>
+                        </div>
+                        <h3>Свои мастера</h3>
+                        <p>Не привлекаем субподрядчиков. Бригада постоянная, проверенная.</p>
+                    </div>
+
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                        </div>
+                        <h3>Дизайн-проект</h3>
+                        <p>Подготовим 3D-визуализацию вашей квартиры бесплатно.</p>
+                    </div>
+
+                    <div class="advantage reveal">
+                        <div class="advantage__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                        </div>
+                        <h3>Материалы со скидкой</h3>
+                        <p>Партнёрские цены в магазинах. Экономия до 25% на материалах.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== POPULAR SERVICES ===== -->
+        <section class="section services-block">
+            <div class="container">
+                <div class="section__head reveal">
+                    <span class="eyebrow">Что мы делаем</span>
+                    <h2 class="section__title">Популярные услуги</h2>
+                    <p class="section__sub">Выберите подходящий вариант ремонта</p>
+                </div>
+
+                <!-- Services будут подгружены сюда из services.json через JS -->
+                <div class="services-grid" id="popularServices"></div>
+
+                <div class="section__cta reveal">
+                    <a href="services.html" class="btn btn--ghost">Все услуги →</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TESTIMONIALS ===== -->
+        <section class="section testimonials">
+            <div class="container">
+                <div class="section__head reveal">
+                    <span class="eyebrow">Отзывы</span>
+                    <h2 class="section__title">Что говорят клиенты</h2>
+                </div>
+
+                <div class="testimonials__grid">
+                    <article class="testimonial reveal">
+                        <div class="testimonial__stars">★★★★★</div>
+                        <p class="testimonial__text">
+                            Сделали капитальный ремонт двушки за 2,5 месяца — как
+                            и обещали. Никаких сюрпризов по смете, всё чётко по договору.
+                            Очень довольны качеством.
+                        </p>
+                        <div class="testimonial__author">
+                            <div class="testimonial__avatar">АК</div>
+                            <div>
+                                <strong>Анна Кравченко</strong>
+                                <span>Квартира 68 м²</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="testimonial reveal">
+                        <div class="testimonial__stars">★★★★★</div>
+                        <p class="testimonial__text">
+                            Заказывал евроремонт в новостройке. Понравилось, что
+                            предложили дизайн-проект бесплатно. Мастера аккуратные,
+                            убирают за собой каждый день.
+                        </p>
+                        <div class="testimonial__author">
+                            <div class="testimonial__avatar">ДМ</div>
+                            <div>
+                                <strong>Дмитрий Морозов</strong>
+                                <span>Квартира 85 м²</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="testimonial reveal">
+                        <div class="testimonial__stars">★★★★★</div>
+                        <p class="testimonial__text">
+                            Ремонтировали дом 140 м². Прораб всегда на связи,
+                            присылал отчёты с фото. Гарантию дали на 5 лет,
+                            один раз вызывали — всё устранили бесплатно.
+                        </p>
+                        <div class="testimonial__author">
+                            <div class="testimonial__avatar">ЕВ</div>
+                            <div>
+                                <strong>Елена Власова</strong>
+                                <span>Дом 140 м²</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== CONTACT FORM ===== -->
+        <section class="section contact" id="contact">
+            <div class="container">
+                <div class="contact__grid">
+                    <div class="contact__info reveal">
+                        <span class="eyebrow">Свяжитесь с нами</span>
+                        <h2 class="section__title">Оставьте заявку</h2>
+                        <p class="lead">
+                            Перезвоним в течение 15 минут. Бесплатный выезд замерщика
+                            и расчёт стоимости.
+                        </p>
+
+                        <ul class="contact__list">
+                            <li>
+                                <span class="contact__label">Телефон</span>
+                                <a href="tel:+380501234567">+38 (050) 123-45-67</a>
+                            </li>
+                            <li>
+                                <span class="contact__label">Email</span>
+                                <a href="mailto:info@remontpro.ua">info@remontpro.ua</a>
+                            </li>
+                            <li>
+                                <span class="contact__label">Режим работы</span>
+                                <span>Пн–Сб 9:00 — 19:00</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <form class="form reveal" id="contactForm" novalidate>
+                        <div class="form__field">
+                            <label for="name">Имя</label>
+                            <input type="text" id="name" name="name" placeholder="Ваше имя" required>
+                            <span class="form__error" data-error-for="name"></span>
+                        </div>
+
+                        <div class="form__field">
+                            <label for="phone">Телефон</label>
+                            <input type="tel" id="phone" name="phone" placeholder="+38 (___) ___-__-__" required>
+                            <span class="form__error" data-error-for="phone"></span>
+                        </div>
+
+                        <div class="form__field">
+                            <label for="comment">Комментарий</label>
+                            <textarea id="comment" name="comment" rows="4" placeholder="Расскажите о вашем объекте"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn--primary btn--full">Отправить заявку</button>
+                        <p class="form__note">Нажимая кнопку, вы соглашаетесь с обработкой персональных данных</p>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="container footer__inner">
+            <div class="footer__col">
+                <a href="index.html" class="logo logo--light">
+                    <span class="logo__mark">R</span>
+                    <span class="logo__text">РемонтПро</span>
+                </a>
+                <p>Ремонт квартир и домов под ключ. Делаем красиво и честно с 2013 года.</p>
+            </div>
+
+            <div class="footer__col">
+                <h4>Навигация</h4>
+                <ul>
+                    <li><a href="index.html">Главная</a></li>
+                    <li><a href="services.html">Услуги</a></li>
+                    <li><a href="about.html">О нас</a></li>
+                    <li><a href="contacts.html">Контакты</a></li>
+                </ul>
+            </div>
+
+            <div class="footer__col">
+                <h4>Контакты</h4>
+                <ul>
+                    <li><a href="tel:+380501234567">+38 (050) 123-45-67</a></li>
+                    <li><a href="mailto:info@remontpro.ua">info@remontpro.ua</a></li>
+                    <li>г. Николаев, ул. Соборная, 12</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer__bottom container">
+            <p>© 2026 РемонтПро. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- ===== FLOATING CONTACTS ===== -->
+    <div class="floating">
+        <a href="https://wa.me/380501234567" target="_blank" rel="noopener" class="floating__btn floating__btn--wa" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.52 3.48A11.93 11.93 0 0 0 12.05 0C5.5 0 .15 5.34.15 11.9c0 2.1.55 4.14 1.6 5.95L0 24l6.32-1.66a11.86 11.86 0 0 0 5.72 1.46h.01c6.55 0 11.9-5.34 11.9-11.9 0-3.18-1.24-6.17-3.43-8.42zM12.05 21.78h-.01a9.86 9.86 0 0 1-5.04-1.38l-.36-.22-3.75.98 1-3.65-.23-.37a9.85 9.85 0 0 1-1.51-5.24c0-5.45 4.43-9.88 9.9-9.88 2.64 0 5.13 1.03 7 2.9a9.83 9.83 0 0 1 2.9 7c0 5.45-4.44 9.88-9.9 9.88zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.34.22-.64.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.14.3-.36.45-.54.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.03 1-1.03 2.45s1.06 2.85 1.2 3.05c.15.2 2.09 3.2 5.07 4.49.71.3 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/>
+            </svg>
+        </a>
+        <a href="https://t.me/remontpro" target="_blank" rel="noopener" class="floating__btn floating__btn--tg" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.94 8.2-1.97 9.28c-.15.66-.54.82-1.08.51l-3-2.21-1.45 1.39c-.16.16-.29.29-.6.29l.21-3.02 5.5-4.97c.24-.21-.05-.33-.37-.12L8.4 13.42 5.4 12.5c-.65-.2-.66-.65.14-.96l11.74-4.52c.54-.2 1.02.12.84.96z"/>
+            </svg>
+        </a>
+    </div>
+
+    <!-- ===== TOAST NOTIFICATION ===== -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
