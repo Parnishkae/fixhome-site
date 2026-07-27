@@ -12,3 +12,8 @@ if not exist ".venv" (
 
 call ".venv\Scripts\activate.bat"
 python -m assistant.main %*
+
+REM Не закрывать окно молча, чтобы была видна ошибка при падении.
+echo.
+echo (помощник завершил работу — окно можно закрыть)
+pause
