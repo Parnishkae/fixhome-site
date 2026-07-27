@@ -28,10 +28,15 @@ class SpeechRecognizer:
     def __init__(self, model_path: str | Path, sample_rate: int = 16000,
                  input_device: int | None = None):
         model_path = Path(model_path)
-        if not model_path.exists():
+        # Папка должна не только существовать, но и содержать файлы модели
+        # (am/ и conf/) — иначе Vosk падает с невнятной ошибкой.
+        valid = (model_path / "am").is_dir() and (model_path / "conf").is_dir()
+        if not valid:
             raise FileNotFoundError(
-                f"Модель Vosk не найдена: {model_path}\n"
-                "Скачай русскую модель и распакуй её (см. README, «Установка»):\n"
+                f"Модель Vosk не найдена или неполная: {model_path}\n"
+                "Докачай её командой:\n"
+                "  python scripts\\download_model.py\n"
+                "или скачай вручную и распакуй в папку models/:\n"
                 "  https://alphacephei.com/vosk/models"
             )
         self.sample_rate = sample_rate
