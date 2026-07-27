@@ -1,16 +1,16 @@
-# Системные файлы
-.DS_Store
-Thumbs.db
-desktop.ini
+# Виртуальное окружение
+.venv/
+venv/
 
-# VS Code
-.vscode/
+# Скачанная модель Vosk (большая, качается install.bat)
+models/
 
-# Логи и временное
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Прочее
 *.log
-*.tmp
-
-# Кэш редакторов
-*.swp
-*.swo
-*~
+.DS_Store
