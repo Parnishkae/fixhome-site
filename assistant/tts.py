@@ -39,9 +39,19 @@ class SileroBackend:
                  sample_rate: int = 48000):
         import torch  # тяжёлый импорт — только если движок реально нужен
 
+        from .winpath import native_path
+
         self._torch = torch
         torch.set_num_threads(max(1, (torch.get_num_threads() or 4)))
-        self._model = torch.package.PackageImporter(model_path).load_pickle(
+        # torch (C++) не открывает файлы по путям с кириллицей — берём
+        # короткое ASCII-имя (как для модели Vosk).
+        safe_path = native_path(model_path)
+        if not safe_path.isascii():
+            raise RuntimeError(
+                "путь к модели содержит кириллицу, torch не может её открыть: "
+                f"{safe_path}"
+            )
+        self._model = torch.package.PackageImporter(safe_path).load_pickle(
             "tts_models", "model")
         self._model.to(torch.device("cpu"))
         self._speaker = speaker

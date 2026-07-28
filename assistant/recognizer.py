@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import ctypes
 import json
-import os
 import queue
 import sys
 from pathlib import Path
@@ -12,26 +10,9 @@ from pathlib import Path
 import sounddevice as sd
 from vosk import KaldiRecognizer, Model, SetLogLevel
 
+from .winpath import native_path as _native_model_path
+
 SetLogLevel(-1)  # приглушаем внутренние логи Vosk
-
-
-def _native_model_path(path: Path) -> str:
-    """Путь, который умеет открыть C++-движок Vosk.
-
-    Vosk не открывает файлы по путям с не-ASCII символами (например, если
-    имя пользователя Windows написано кириллицей). Берём «короткое» имя
-    пути 8.3 (C:\\Users\\DANKA~1\\...), оно всегда в ASCII.
-    """
-    p = str(path)
-    if os.name != "nt":
-        return p
-    try:
-        buf = ctypes.create_unicode_buffer(4096)
-        if ctypes.windll.kernel32.GetShortPathNameW(p, buf, 4096):
-            return buf.value
-    except Exception:
-        pass
-    return p
 
 
 def list_microphones() -> str:
