@@ -16,7 +16,7 @@ if not exist ".venv" (
 call ".venv\Scripts\activate.bat"
 
 echo.
-echo === [1/3] Устанавливаю PyTorch (CPU-версия, ~200 МБ) ===
+echo === [1/4] Устанавливаю PyTorch (CPU-версия, ~200 МБ) ===
 REM CPU-индекс, чтобы не тянуть огромную CUDA-сборку.
 pip install --index-url https://download.pytorch.org/whl/cpu torch
 if errorlevel 1 (
@@ -26,12 +26,22 @@ if errorlevel 1 (
 )
 
 echo.
-echo === [2/3] Устанавливаю num2words (числа -^> слова) ===
-pip install num2words
+echo === [2/4] Устанавливаю numpy и num2words ===
+pip install numpy num2words
 
 echo.
-echo === [3/3] Скачиваю голосовую модель Silero ===
+echo === [3/4] Обновляю comtypes (фикс системного голоса и громкости) ===
+pip install -U "comtypes>=1.4.6"
+
+echo.
+echo === [4/4] Скачиваю голосовую модель Silero ===
 python scripts\download_voice.py
+if errorlevel 1 (
+    echo.
+    echo ВНИМАНИЕ: модель голоса не скачалась. Скачай вручную:
+    echo   https://models.silero.ai/models/tts/ru/v4_ru.pt
+    echo и положи файл в:  models\silero\v4_ru.pt
+)
 
 echo.
 echo ============================================================
