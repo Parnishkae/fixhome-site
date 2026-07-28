@@ -35,13 +35,7 @@ def _strip_wake_word(text: str, wake_word: str) -> str:
 
 def run(config: Config) -> None:
     # --- Инициализация компонентов ---
-    tts_cfg = config.section("tts")
-    speaker = Speaker(
-        rate=tts_cfg.get("rate", 180),
-        volume=tts_cfg.get("volume", 1.0),
-        voice_hint=tts_cfg.get("voice_hint", "ru"),
-        enabled=config.get("assistant.speak_responses", True),
-    )
+    speaker = Speaker(config)
 
     recognizer = SpeechRecognizer(
         model_path=config.resolve_path("speech.model_path"),
