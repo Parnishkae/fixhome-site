@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 from typing import Callable
 
-from . import learned
+from . import learned, memory
 from .config import Config
 from .dispatcher import Context, Dispatcher
 from .executor import run_steps
@@ -24,6 +24,7 @@ _EXIT_PHRASES = ("выключись", "завершение работы", "з�
 _RELOAD_PHRASES = ("перезагрузи настройки", "обнови настройки",
                    "перечитай конфиг", "перезагрузи конфиг")
 # Фразы, при которых помощник смотрит на экран (делает скриншот для ИИ).
+_FORGET_PHRASES = ("забудь всё", "забудь все", "очисти память", "сотри память")
 _VISION_PHRASES = (
     "на экране", "что это", "что тут", "что здесь", "посмотри", "прочитай",
     "переведи", "опиши экран", "что открыто", "что видишь", "нажми на",
@@ -125,6 +126,11 @@ class Assistant:
             self.dispatcher.register(learned.make_intent(phrase, steps))
             self._emit("info", f"Выучена команда: «{phrase}»")
 
+        fact = result.get("memory")
+        if isinstance(fact, str) and fact.strip():
+            memory.add_fact(fact)
+            self._emit("info", f"Запомнила: {fact}")
+
     def _reload_config(self) -> None:
         """Перечитывает config.yaml и выученные команды без перезапуска."""
         self.config = Config.load()
@@ -179,7 +185,11 @@ class Assistant:
 
             wants_vision = any(p in command for p in _VISION_PHRASES)
 
-            if any(p in command for p in _RELOAD_PHRASES):
+            if any(p in command for p in _FORGET_PHRASES):
+                self._emit("status", "work")
+                memory.clear()
+                self.context.say("Хорошо, всё забыла")
+            elif any(p in command for p in _RELOAD_PHRASES):
                 self._emit("status", "work")
                 self._reload_config()
             elif wants_vision and self.brain is not None and self.brain.has_vision:

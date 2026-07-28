@@ -69,10 +69,11 @@ SYSTEM_PROMPT = """\
 {
   "say": "короткая фраза, которую ты произнесёшь вслух (по-русски, живо)",
   "actions": [ шаги ],           // что выполнить; можно пустой список []
-  "learn": null | {              // если стоит запомнить команду на будущее
+  "learn": null | {              // если стоит запомнить КОМАНДУ (фраза -> действия)
      "phrase": "ключевая фраза",
      "steps": [ шаги ]
-  }
+  },
+  "memory": null | "факт"        // если стоит запомнить ФАКТ о пользователе
 }
 
 Шаг action — это объект {"type": ..., "value": ...}. Доступные типы:
@@ -95,8 +96,10 @@ SYSTEM_PROMPT = """\
   используй подходящие шаги; для нестандартного — "shell".
 - Команды shell должны быть безопасны и соответствовать просьбе. Не выполняй
   разрушительных действий, если пользователь явно об этом не попросил.
-- Если пользователь просит ЗАПОМНИТЬ команду («запомни», «научись», «на будущее»),
-  заполни "learn": фразу-триггер и шаги. Иначе "learn": null.
+- Если пользователь просит ЗАПОМНИТЬ команду («когда я говорю X — делай Y»),
+  заполни "learn". Если просит запомнить ФАКТ о себе («меня зовут…», «мой
+  браузер…», «я работаю…») — заполни "memory" коротким фактом. Иначе — null.
+- Учитывай то, что ты уже помнишь о пользователе (блок ниже).
 - Отвечай кратко — это озвучивается голосом.
 """
 
@@ -171,9 +174,20 @@ class Brain:
             data = {"say": content or "Не поняла", "actions": [], "learn": None}
         return data
 
+    def _system_messages(self, extra: str = "") -> list[dict]:
+        """Системные сообщения: правила + актуальная память о пользователе."""
+        from . import memory
+
+        content = self._system + (("\n" + extra) if extra else "")
+        msgs = [{"role": "system", "content": content}]
+        mem = memory.as_prompt()
+        if mem:
+            msgs.append({"role": "system", "content": mem})
+        return msgs
+
     def think(self, text: str) -> dict:
         """Отправляет фразу в LLM (без картинки)."""
-        messages = [{"role": "system", "content": self._system}]
+        messages = self._system_messages()
         messages += self._history[-6:]
         messages.append({"role": "user", "content": text})
 
@@ -192,11 +206,9 @@ class Brain:
 
         data_uri, (w, h) = capture_data_uri(self.vision_max_width)
         user_text = f"{text}\n\n(Размер реального экрана: {w}x{h} пикселей.)"
-        messages = [
-            {"role": "system", "content": self._system + "\n" + VISION_HINT},
-            {"role": "user", "content": [
-                {"type": "text", "text": user_text},
-                {"type": "image_url", "image_url": {"url": data_uri}},
-            ]},
-        ]
+        messages = self._system_messages(VISION_HINT)
+        messages.append({"role": "user", "content": [
+            {"type": "text", "text": user_text},
+            {"type": "image_url", "image_url": {"url": data_uri}},
+        ]})
         return self._complete(messages, self.vision_model)
