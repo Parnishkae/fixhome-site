@@ -16,15 +16,21 @@ SECRETS = ROOT / "secrets.yaml"
 def main() -> int:
     print("=== Настройка ИИ-мозга Мисы ===\n")
 
+    known = ("gemini", "grok", "groq", "openrouter", "ollama", "openai")
+    print("Провайдеры: gemini, grok, groq (бесплатный), openrouter, ollama"
+          " (локально), openai\n")
     provider = ""
-    while provider not in ("gemini", "grok"):
-        provider = input("Провайдер (gemini / grok): ").strip().lower()
-        if provider not in ("gemini", "grok"):
-            print("  Введи 'gemini' или 'grok'.")
+    while provider not in known:
+        provider = input("Провайдер: ").strip().lower()
+        if provider not in known:
+            print(f"  Введи одно из: {', '.join(known)}")
 
     key = ""
-    while not key:
-        key = input(f"Вставь API-ключ {provider}: ").strip()
+    if provider == "ollama":
+        print("Ollama работает локально — ключ не нужен.")
+    else:
+        while not key:
+            key = input(f"Вставь API-ключ ({provider}): ").strip()
 
     model = input("Модель (Enter — по умолчанию): ").strip()
 

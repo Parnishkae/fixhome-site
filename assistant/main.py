@@ -49,12 +49,28 @@ def _init_brain(config, speaker):
         return None
 
 
+def _short_ai_error(exc: Exception) -> str:
+    """Короткая фраза для озвучки вместо длинного текста ошибки API."""
+    text = str(exc).lower()
+    if "429" in text or "quota" in text or "resource_exhausted" in text \
+            or "rate limit" in text:
+        return "Закончился лимит запросов к ИИ. Попробуй позже или смени провайдера"
+    if "model not found" in text or "does not exist" in text or "404" in text:
+        return "Модель ИИ недоступна. Проверь настройки ключа"
+    if "401" in text or "invalid" in text and "key" in text or "api key" in text:
+        return "Ключ ИИ не принят. Проверь его в настройках"
+    if "connect" in text or "timeout" in text or "getaddrinfo" in text:
+        return "Нет связи с ИИ. Проверь интернет"
+    return "ИИ не смог ответить"
+
+
 def _handle_with_brain(brain, context, dispatcher, command: str) -> None:
     """Отдаёт нераспознанную фразу ИИ, исполняет ответ, учит новые команды."""
     try:
         result = brain.think(command)
     except Exception as exc:
-        context.say(f"Не смогла подумать: {exc}")
+        print(f"[ai] Ошибка запроса: {exc}")   # полный текст — в консоль
+        context.say(_short_ai_error(exc))       # короткая фраза — голосом
         return
 
     say = result.get("say")

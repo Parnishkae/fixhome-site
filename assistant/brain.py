@@ -20,7 +20,26 @@ PROVIDERS = {
     },
     "grok": {
         "base_url": "https://api.x.ai/v1",
-        "model": "grok-2-latest",
+        "model": "grok-3",
+    },
+    # Groq (НЕ Grok!) — быстрый и щедрый бесплатный API, ключ на console.groq.com
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "model": "llama-3.3-70b-versatile",
+    },
+    # OpenRouter — агрегатор, есть бесплатные модели (openrouter.ai)
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+    },
+    # Ollama — локально, офлайн, бесплатно (нужен установленный ollama)
+    "ollama": {
+        "base_url": "http://localhost:11434/v1",
+        "model": "llama3.1",
+    },
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "model": "gpt-4o-mini",
     },
 }
 
@@ -90,6 +109,9 @@ class Brain:
         secrets = config.load_secrets()
         provider = str(secrets.get("provider", "gemini")).lower()
         api_key = secrets.get("api_key") or ""
+        # Ollama работает локально без ключа — подставим заглушку.
+        if provider == "ollama" and not api_key:
+            api_key = "ollama"
         if not api_key:
             raise RuntimeError(
                 "нет API-ключа. Запусти: python scripts\\setup_ai.py")
