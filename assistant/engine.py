@@ -26,6 +26,8 @@ _RELOAD_PHRASES = ("перезагрузи настройки", "обнови н
                    "перечитай конфиг", "перезагрузи конфиг")
 # Фразы, при которых помощник смотрит на экран (делает скриншот для ИИ).
 _FORGET_PHRASES = ("забудь всё", "забудь все", "очисти память", "сотри память")
+_AGENT_PHRASES = ("выполни задачу", "сделай по шагам", "по шагам", "реши задачу",
+                  "выполни цепочку", "сделай следующее")
 _VISION_PHRASES = (
     "на экране", "что это", "что тут", "что здесь", "посмотри", "прочитай",
     "переведи", "опиши экран", "что открыто", "что видишь", "нажми на",
@@ -142,6 +144,75 @@ class Assistant:
             memory.add_fact(fact)
             self._emit("info", f"Запомнила: {fact}")
 
+        # ИИ сам решил, что это многошаговая задача — запускаем агента.
+        if result.get("agent") is True:
+            self._run_agent(command)
+
+    def _exec_agent_action(self, action: dict) -> str:
+        """Выполняет одно действие агента и возвращает наблюдение (текст)."""
+        a_type = str(action.get("type", "")).lower()
+        value = action.get("value")
+        if a_type in ("shell", "run", "cmd"):
+            if not self.context.allow_shell:
+                return "выполнение команд отключено в настройках"
+            from . import actions
+            return actions.run_shell_capture(str(value))
+        try:
+            run_steps(self.context, [action])
+            return "выполнено"
+        except Exception as exc:
+            return f"ошибка: {exc}"
+
+    def _run_agent(self, goal: str) -> None:
+        """Автономный цикл: шаг -> действие -> наблюдение -> следующий шаг."""
+        if self.brain is None:
+            self.context.say("Для задач нужен ИИ")
+            return
+        max_steps = int(self.config.get("ai.agent.max_steps", 8))
+        self._emit("info", f"Задача: {goal}")
+        log: list[dict] = []
+        screenshot = None
+
+        for _ in range(max_steps):
+            self._emit("status", "think")
+            try:
+                step = self.brain.agent_step(goal, log, screenshot)
+            except Exception as exc:
+                print(f"[agent] {exc}")
+                self.context.say(_short_ai_error(exc))
+                return
+
+            say = step.get("say")
+            if say:
+                self.context.say(str(say))
+
+            if step.get("done"):
+                self.context.say(str(step.get("result") or "Готово"))
+                self._emit("status", "listen")
+                return
+
+            action = step.get("action")
+            observation = ""
+            screenshot = None
+            if action:
+                self._emit("status", "work")
+                observation = self._exec_agent_action(action)
+
+            if step.get("observe_screen") and self.brain.has_vision:
+                try:
+                    from .screen import capture_data_uri
+                    screenshot, (w, h) = capture_data_uri(
+                        self.brain.vision_max_width)
+                    observation += f" [скриншот {w}x{h}]"
+                except Exception:
+                    pass
+
+            log.append({"thought": step.get("thought"),
+                        "action": action, "observation": observation})
+
+        self.context.say("Не уложилась в лимит шагов. Уточни задачу")
+        self._emit("status", "listen")
+
     def _reload_config(self) -> None:
         """Перечитывает config.yaml и выученные команды без перезапуска."""
         self.config = Config.load()
@@ -203,6 +274,8 @@ class Assistant:
                 self._emit("status", "work")
                 memory.clear()
                 self.context.say("Хорошо, всё забыла")
+            elif any(p in command for p in _AGENT_PHRASES) and self.brain is not None:
+                self._run_agent(command)
             elif any(p in command for p in _RELOAD_PHRASES):
                 self._emit("status", "work")
                 self._reload_config()

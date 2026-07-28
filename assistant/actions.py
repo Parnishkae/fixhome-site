@@ -13,6 +13,20 @@ def run_shell(command: str) -> None:
     subprocess.Popen(command, shell=True)
 
 
+def run_shell_capture(command: str, timeout: int = 30) -> str:
+    """Выполняет команду и возвращает её вывод (для агента). Обрезает длинный."""
+    try:
+        proc = subprocess.run(command, shell=True, capture_output=True,
+                              text=True, timeout=timeout, errors="replace")
+        out = (proc.stdout or "") + (proc.stderr or "")
+        out = out.strip() or f"(код возврата {proc.returncode}, вывода нет)"
+    except subprocess.TimeoutExpired:
+        out = "(команда не завершилась за отведённое время)"
+    except Exception as exc:
+        out = f"(ошибка запуска: {exc})"
+    return out[:1500]  # не раздуваем контекст
+
+
 def open_app(config, key_or_cmd: str) -> str:
     """Открывает программу по ключу из config.apps или как сырую команду.
 

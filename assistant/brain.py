@@ -73,8 +73,13 @@ SYSTEM_PROMPT = """\
      "phrase": "ключевая фраза",
      "steps": [ шаги ]
   },
-  "memory": null | "факт"        // если стоит запомнить ФАКТ о пользователе
+  "memory": null | "факт",       // если стоит запомнить ФАКТ о пользователе
+  "agent": false                 // true, если это МНОГОШАГОВАЯ задача (см. ниже)
 }
+
+Ставь "agent": true, если задача требует нескольких действий с проверкой
+результата («открой X, найди Y, сделай Z, сохрани») — тогда её выполнит
+пошаговый агент. Для простых одиночных команд — false.
 
 Шаг action — это объект {"type": ..., "value": ...}. Доступные типы:
   {"type":"app",   "value":"<название программы или команда запуска>"}
@@ -104,6 +109,34 @@ SYSTEM_PROMPT = """\
 """
 
 
+AGENT_SYSTEM = """\
+Ты — Миса, автономный агент на компьютере с Windows. Тебе дают ЦЕЛЬ, и ты
+достигаешь её ПО ШАГАМ, сам решая, что делать дальше по результатам.
+
+На каждом шаге отвечай СТРОГО одним объектом JSON без markdown:
+{
+  "thought": "коротко: что делаю и зачем",
+  "action": null | {"type": ..., "value": ...},   // ОДНО действие за шаг
+  "observe_screen": true|false,   // нужен ли скриншот экрана перед след. шагом
+  "say": "короткая реплика вслух о прогрессе (можно пустую)",
+  "done": true|false,             // цель достигнута?
+  "result": "итоговый ответ пользователю, когда done=true"
+}
+
+Типы action: app, site, search, key, type, shell, wait, click, double_click,
+right_click, scroll (как обычно). Для сложного используй shell — тебе вернётся
+его вывод как наблюдение. Ставь observe_screen=true, когда нужно проверить
+результат глазами (после этого получишь скриншот).
+
+Правила:
+- Делай по ОДНОМУ действию за шаг и жди наблюдения.
+- Опирайся на наблюдения из истории (вывод команд, скриншоты).
+- Не выполняй разрушительных действий без явной просьбы.
+- Как только цель достигнута — done=true и заполни result.
+- Если застрял или невозможно — done=true и честно опиши в result.
+"""
+
+
 def _capabilities_block(apps, sites, scenarios) -> str:
     """Список известных программ/сайтов/сценариев для подсказки модели."""
     return (
@@ -114,6 +147,27 @@ def _capabilities_block(apps, sites, scenarios) -> str:
         "Известные сценарии: "
         f"{', '.join(scenarios) or 'нет'}"
     )
+
+
+def _memory_prompt() -> str:
+    from . import memory
+    return memory.as_prompt()
+
+
+def _format_log(log: list[dict]) -> str:
+    """История шагов агента в компактный текст."""
+    if not log:
+        return "(пока пусто — это первый шаг)"
+    lines = []
+    for i, step in enumerate(log, 1):
+        action = step.get("action")
+        obs = step.get("observation", "")
+        lines.append(f"{i}. мысль: {step.get('thought', '')}")
+        if action:
+            lines.append(f"   действие: {action}")
+        if obs:
+            lines.append(f"   наблюдение: {obs}")
+    return "\n".join(lines)
 
 
 def _extract_json(text: str) -> dict:
@@ -141,6 +195,7 @@ class Brain:
                 "нет API-ключа. Запусти: python scripts\\setup_ai.py")
         preset = PROVIDERS.get(provider, PROVIDERS["gemini"])
 
+        self.config = config
         self.provider = provider
         self.model = secrets.get("model") or preset["model"]
         self.temperature = float(config.get("ai.temperature", 0.3))
@@ -214,3 +269,35 @@ class Brain:
             {"type": "image_url", "image_url": {"url": data_uri}},
         ]})
         return self._complete(messages, self.vision_model)
+
+    def agent_step(self, goal: str, log: list[dict],
+                   screenshot_uri: str | None = None) -> dict:
+        """Один шаг автономного агента.
+
+        goal — цель; log — история [{thought, action, observation}];
+        screenshot_uri — скриншот, если на прошлом шаге просили observe_screen.
+        """
+        system = AGENT_SYSTEM + "\n" + _capabilities_block(
+            list(self.config.section("apps").keys()),
+            list(self.config.section("sites").keys()),
+            list(self.config.section("scenarios").keys()),
+        )
+        user_text = f"ЦЕЛЬ: {goal}\n\nИстория шагов:\n{_format_log(log)}\n\n" \
+                    "Твой следующий шаг (JSON):"
+
+        messages = [{"role": "system", "content": system}]
+        mem = _memory_prompt()
+        if mem:
+            messages.append({"role": "system", "content": mem})
+
+        if screenshot_uri:
+            messages.append({"role": "user", "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url", "image_url": {"url": screenshot_uri}},
+            ]})
+            model = self.vision_model
+        else:
+            messages.append({"role": "user", "content": user_text})
+            model = self.model
+
+        return self._complete(messages, model)
