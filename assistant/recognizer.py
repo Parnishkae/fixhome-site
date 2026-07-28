@@ -56,7 +56,9 @@ class SpeechRecognizer:
         self._audio_q: "queue.Queue[bytes]" = queue.Queue()
 
     def _callback(self, indata, frames, time_info, status):
-        if status:
+        # input overflow — безобидный кратковременный сбой буфера (например,
+        # при загрузке модели), не шумим им в консоль.
+        if status and "overflow" not in str(status).lower():
             print(f"[mic] {status}", file=sys.stderr)
         self._audio_q.put(bytes(indata))
 

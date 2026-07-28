@@ -58,11 +58,19 @@ SYSTEM_PROMPT = """\
 - Если пользователь просит ЗАПОМНИТЬ команду («запомни», «научись», «на будущее»),
   заполни "learn": фразу-триггер и шаги. Иначе "learn": null.
 - Отвечай кратко — это озвучивается голосом.
-
-Известные программы (ключи для type=app): {apps}
-Известные сайты (ключи для type=site): {sites}
-Известные сценарии: {scenarios}
 """
+
+
+def _capabilities_block(apps, sites, scenarios) -> str:
+    """Список известных программ/сайтов/сценариев для подсказки модели."""
+    return (
+        "Известные программы (ключи для type=app): "
+        f"{', '.join(apps) or 'нет'}\n"
+        "Известные сайты (ключи для type=site): "
+        f"{', '.join(sites) or 'нет'}\n"
+        "Известные сценарии: "
+        f"{', '.join(scenarios) or 'нет'}"
+    )
 
 
 def _extract_json(text: str) -> dict:
@@ -95,11 +103,8 @@ class Brain:
         apps = list(config.section("apps").keys())
         sites = list(config.section("sites").keys())
         scenarios = list(config.section("scenarios").keys())
-        self._system = SYSTEM_PROMPT.format(
-            apps=", ".join(apps) or "нет",
-            sites=", ".join(sites) or "нет",
-            scenarios=", ".join(scenarios) or "нет",
-        )
+        self._system = SYSTEM_PROMPT + "\n" + _capabilities_block(
+            apps, sites, scenarios)
         self._history: list[dict] = []  # короткая память диалога
 
     def think(self, text: str) -> dict:
