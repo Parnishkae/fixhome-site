@@ -14,6 +14,14 @@ from __future__ import annotations
 from . import actions
 
 
+def _parse_xy(value) -> tuple[int, int]:
+    """Разбирает координаты из 'x,y' или [x, y]."""
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        return int(value[0]), int(value[1])
+    parts = str(value).replace(";", ",").split(",")
+    return int(float(parts[0])), int(float(parts[1]))
+
+
 def _parse_step(step: dict):
     if "type" in step:
         return str(step.get("type", "")).lower(), step.get("value")
@@ -46,10 +54,29 @@ def run_step(context, step: dict) -> None:
             actions.run_shell(str(value))
         else:
             context.say("Выполнение системных команд отключено в настройках")
+    elif action in ("click", "move", "double_click", "right_click", "scroll"):
+        _mouse_action(action, value)
     elif action == "scenario":
         run_named_scenario(context, str(value))
     else:
         context.say(f"Неизвестный шаг: {action}")
+
+
+def _mouse_action(action: str, value) -> None:
+    import pyautogui
+
+    if action == "scroll":
+        pyautogui.scroll(int(float(str(value))))
+        return
+    x, y = _parse_xy(value)
+    if action == "click":
+        pyautogui.click(x, y)
+    elif action == "double_click":
+        pyautogui.doubleClick(x, y)
+    elif action == "right_click":
+        pyautogui.rightClick(x, y)
+    elif action == "move":
+        pyautogui.moveTo(x, y)
 
 
 def run_steps(context, steps) -> None:

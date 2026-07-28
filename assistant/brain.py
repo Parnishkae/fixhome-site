@@ -43,6 +43,23 @@ PROVIDERS = {
     },
 }
 
+# Мультимодальные модели (умеют «видеть» картинку) по провайдерам.
+VISION_MODELS = {
+    "gemini": "gemini-2.0-flash",
+    "grok": "grok-2-vision-1212",
+    "groq": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "openrouter": "meta-llama/llama-3.2-11b-vision-instruct",
+    "ollama": "llama3.2-vision",
+    "openai": "gpt-4o-mini",
+}
+
+VISION_HINT = """
+Сейчас к сообщению приложен СКРИНШОТ экрана пользователя. Смотри на него и
+отвечай/действуй по тому, что видишь. Если просят кликнуть по элементу —
+верни action click/double_click с координатами "x,y" в пикселях РЕАЛЬНОГО
+экрана (его размер указан в сообщении). Координаты — центр нужного элемента.
+"""
+
 SYSTEM_PROMPT = """\
 Ты — Миса, голосовой помощник на компьютере пользователя с Windows. Ты понимаешь
 русскую речь и управляешь ПК. Пользователь говорит тебе фразу, а ты решаешь, что
@@ -67,6 +84,10 @@ SYSTEM_PROMPT = """\
   {"type":"shell", "value":"<команда Windows cmd/powershell>"}   // полный контроль ПК
   {"type":"wait",  "value":<секунды>}
   {"type":"scenario","value":"<имя готового сценария>"}
+  {"type":"click", "value":"x,y"}         // клик мышью по координатам экрана
+  {"type":"double_click","value":"x,y"}
+  {"type":"right_click","value":"x,y"}
+  {"type":"scroll","value":<число, + вверх / - вниз>}
 
 Правила:
 - Если это обычный разговор/вопрос — ответь в "say", "actions" пусти пустым.
@@ -129,27 +150,53 @@ class Brain:
             apps, sites, scenarios)
         self._history: list[dict] = []  # короткая память диалога
 
-    def think(self, text: str) -> dict:
-        """Отправляет фразу в LLM, возвращает разобранный ответ (dict)."""
-        messages = [{"role": "system", "content": self._system}]
-        messages += self._history[-6:]
-        messages.append({"role": "user", "content": text})
+        # --- Зрение (мультимодальная модель) ---
+        self.vision_enabled = bool(config.get("ai.vision.enabled", True))
+        self.vision_model = (config.get("ai.vision.model")
+                             or VISION_MODELS.get(provider) or self.model)
+        self.vision_max_width = int(config.get("ai.vision.max_width", 1280))
+        self.has_vision = self.vision_enabled and bool(self.vision_model)
 
+    def _complete(self, messages: list, model: str) -> dict:
+        """Запрос к модели + разбор JSON + запись в память диалога."""
         resp = self._client.chat.completions.create(
-            model=self.model,
+            model=model,
             messages=messages,
             temperature=self.temperature,
         )
         content = (resp.choices[0].message.content or "").strip()
-
         try:
             data = _extract_json(content)
         except Exception:
-            # Модель ответила не-JSON — считаем это простым разговором.
             data = {"say": content or "Не поняла", "actions": [], "learn": None}
+        return data
 
-        # Обновляем память диалога.
+    def think(self, text: str) -> dict:
+        """Отправляет фразу в LLM (без картинки)."""
+        messages = [{"role": "system", "content": self._system}]
+        messages += self._history[-6:]
+        messages.append({"role": "user", "content": text})
+
+        data = self._complete(messages, self.model)
+
         self._history.append({"role": "user", "content": text})
-        self._history.append({"role": "assistant", "content": content})
+        self._history.append(
+            {"role": "assistant", "content": json.dumps(data, ensure_ascii=False)})
         self._history = self._history[-12:]
         return data
+
+    def look(self, text: str) -> dict:
+        """Делает скриншот и отправляет его в мультимодальную модель вместе
+        с фразой пользователя. Возвращает такой же ответ, как think()."""
+        from .screen import capture_data_uri
+
+        data_uri, (w, h) = capture_data_uri(self.vision_max_width)
+        user_text = f"{text}\n\n(Размер реального экрана: {w}x{h} пикселей.)"
+        messages = [
+            {"role": "system", "content": self._system + "\n" + VISION_HINT},
+            {"role": "user", "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url", "image_url": {"url": data_uri}},
+            ]},
+        ]
+        return self._complete(messages, self.vision_model)

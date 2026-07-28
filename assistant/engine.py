@@ -23,6 +23,12 @@ from .tts import Speaker
 _EXIT_PHRASES = ("выключись", "завершение работы", "закрой себя", "стоп работа")
 _RELOAD_PHRASES = ("перезагрузи настройки", "обнови настройки",
                    "перечитай конфиг", "перезагрузи конфиг")
+# Фразы, при которых помощник смотрит на экран (делает скриншот для ИИ).
+_VISION_PHRASES = (
+    "на экране", "что это", "что тут", "что здесь", "посмотри", "прочитай",
+    "переведи", "опиши экран", "что открыто", "что видишь", "нажми на",
+    "кликни", "найди на экране", "что написано", "разбери ошибку",
+)
 
 EventCallback = Callable[[str, str], None]
 
@@ -96,10 +102,14 @@ class Assistant:
             self._emit("info", f"ИИ недоступен: {exc}")
             return None
 
-    def _run_brain(self, command: str) -> None:
+    def _run_brain(self, command: str, vision: bool = False) -> None:
         self._emit("status", "think")
         try:
-            result = self.brain.think(command)
+            if vision and self.brain.has_vision:
+                self._emit("info", "Смотрю на экран…")
+                result = self.brain.look(command)
+            else:
+                result = self.brain.think(command)
         except Exception as exc:
             print(f"[ai] Ошибка запроса: {exc}")
             self.context.say(_short_ai_error(exc))
@@ -167,9 +177,14 @@ class Assistant:
                     self._emit("status", "sleep")
                 continue
 
+            wants_vision = any(p in command for p in _VISION_PHRASES)
+
             if any(p in command for p in _RELOAD_PHRASES):
                 self._emit("status", "work")
                 self._reload_config()
+            elif wants_vision and self.brain is not None and self.brain.has_vision:
+                # «Экранные» команды идут в зрение, минуя встроенные навыки.
+                self._run_brain(command, vision=True)
             elif self.dispatcher.handle(command):
                 self._emit("status", "work")
             elif self.brain is not None:
