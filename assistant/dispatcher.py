@@ -25,9 +25,16 @@ class Context:
         self.speaker = speaker
         # Разрешено ли ИИ/сценариям выполнять произвольные системные команды.
         self.allow_shell = bool(config.get("ai.allow_shell", True))
+        # Необязательный хук: интерфейс (окно) получает произнесённый текст.
+        self.on_say = None
 
     def say(self, text: str) -> str:
         self.speaker.say(text)
+        if self.on_say:
+            try:
+                self.on_say(text)
+            except Exception:
+                pass
         return text
 
 
