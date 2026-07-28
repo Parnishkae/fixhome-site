@@ -20,6 +20,15 @@ def open_app(config, key_or_cmd: str) -> str:
     return key_or_cmd
 
 
+def search_web(query: str) -> str:
+    """Открывает поиск Google по запросу."""
+    import urllib.parse
+
+    url = "https://www.google.com/search?q=" + urllib.parse.quote(query.strip())
+    webbrowser.open(url)
+    return url
+
+
 def open_site(config, key_or_url: str) -> str:
     """Открывает сайт по ключу из config.sites или как готовый URL."""
     sites = config.section("sites")

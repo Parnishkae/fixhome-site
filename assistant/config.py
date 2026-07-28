@@ -11,6 +11,8 @@ import yaml
 # Корень проекта = папка на уровень выше пакета assistant/
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = ROOT / "config.yaml"
+# Секреты (API-ключи) — отдельный файл, НЕ попадает в git (.gitignore).
+SECRETS_PATH = ROOT / "secrets.yaml"
 
 
 class Config:
@@ -50,3 +52,11 @@ class Config:
         raw = self.get(dotted_key, default)
         p = Path(raw)
         return p if p.is_absolute() else (ROOT / p)
+
+    @staticmethod
+    def load_secrets() -> dict[str, Any]:
+        """Читает secrets.yaml (API-ключи и т.п.). Нет файла -> пустой dict."""
+        if not SECRETS_PATH.exists():
+            return {}
+        with open(SECRETS_PATH, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}

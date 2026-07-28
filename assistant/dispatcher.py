@@ -23,6 +23,8 @@ class Context:
     def __init__(self, config, speaker):
         self.config = config
         self.speaker = speaker
+        # Разрешено ли ИИ/сценариям выполнять произвольные системные команды.
+        self.allow_shell = bool(config.get("ai.allow_shell", True))
 
     def say(self, text: str) -> str:
         self.speaker.say(text)

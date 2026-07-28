@@ -12,8 +12,10 @@ import argparse
 import sys
 import time
 
+from . import learned
 from .config import Config
 from .dispatcher import Context, Dispatcher
+from .executor import run_steps
 from .recognizer import SpeechRecognizer, list_microphones
 from .skills import build_intents
 from .tts import Speaker
@@ -33,6 +35,43 @@ def _strip_wake_word(text: str, wake_word: str) -> str:
     return " ".join(text.replace(wake_word, " ").split()).strip()
 
 
+def _init_brain(config, speaker):
+    """Поднимает ИИ-мозг, если он включён в конфиге. Иначе None."""
+    if not config.get("ai.enabled", False):
+        return None
+    try:
+        from .brain import Brain
+        brain = Brain(config)
+        print(f"[ai] Мозг подключён: {brain.provider} / {brain.model}")
+        return brain
+    except Exception as exc:
+        print(f"[ai] ИИ недоступен ({exc}). Работаю без него.")
+        return None
+
+
+def _handle_with_brain(brain, context, dispatcher, command: str) -> None:
+    """Отдаёт нераспознанную фразу ИИ, исполняет ответ, учит новые команды."""
+    try:
+        result = brain.think(command)
+    except Exception as exc:
+        context.say(f"Не смогла подумать: {exc}")
+        return
+
+    say = result.get("say")
+    if say:
+        context.say(str(say))
+    run_steps(context, result.get("actions") or [])
+
+    # Саморазвитие: если ИИ решил запомнить команду — сохраняем и
+    # регистрируем её как навык прямо сейчас.
+    learn = result.get("learn")
+    if isinstance(learn, dict) and learn.get("phrase") and learn.get("steps"):
+        phrase, steps = str(learn["phrase"]), learn["steps"]
+        learned.save_command(phrase, steps)
+        dispatcher.register(learned.make_intent(phrase, steps))
+        print(f"[ai] Выучена команда: «{phrase}»")
+
+
 def run(config: Config) -> None:
     # --- Инициализация компонентов ---
     speaker = Speaker(config)
@@ -46,6 +85,9 @@ def run(config: Config) -> None:
     context = Context(config, speaker)
     dispatcher = Dispatcher(context)
     dispatcher.register_all(build_intents(config))
+    dispatcher.register_all(learned.build_intents())  # выученные команды
+
+    brain = _init_brain(config, speaker)
 
     wake_words = [w.lower() for w in config.get("assistant.wake_words", ["миса"])]
     timeout = float(config.get("assistant.listen_timeout", 8))
@@ -84,10 +126,12 @@ def run(config: Config) -> None:
                 continue  # спим, имя не прозвучало
 
             if dispatcher.handle(command):
-                active_until = now + timeout  # продлеваем окно после команды
+                pass  # выполнила встроенную/выученную команду
+            elif brain is not None:
+                _handle_with_brain(brain, context, dispatcher, command)
             else:
-                speaker.say("Не поняла команду")
-                active_until = now + timeout
+                speaker.say("Не поняла команду. Включи ИИ, чтобы я понимала свободную речь")
+            active_until = now + timeout  # продлеваем окно после любой реакции
     except KeyboardInterrupt:
         print("\nОстановлено пользователем.")
     finally:
