@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 import webbrowser
@@ -13,10 +14,20 @@ def run_shell(command: str) -> None:
 
 
 def open_app(config, key_or_cmd: str) -> str:
-    """Открывает программу по ключу из config.apps или как сырую команду."""
+    """Открывает программу по ключу из config.apps или как сырую команду.
+
+    Если значение — путь к существующему файлу (даже с пробелами, напр.
+    ...\\Opera GX\\opera.exe), запускаем его напрямую, чтобы пробелы в пути
+    не ломали команду.
+    """
     apps = config.section("apps")
     command = apps.get(key_or_cmd.strip(), key_or_cmd.strip())
-    run_shell(command)
+
+    path = command.strip().strip('"')
+    if os.path.isfile(path) and hasattr(os, "startfile"):
+        os.startfile(path)  # Windows: корректно открывает путь с пробелами
+    else:
+        run_shell(command)
     return key_or_cmd
 
 

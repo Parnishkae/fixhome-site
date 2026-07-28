@@ -21,6 +21,8 @@ from .skills import build_intents
 from .tts import Speaker
 
 _EXIT_PHRASES = ("выключись", "завершение работы", "закрой себя", "стоп работа")
+_RELOAD_PHRASES = ("перезагрузи настройки", "обнови настройки",
+                   "перечитай конфиг", "перезагрузи конфиг")
 
 EventCallback = Callable[[str, str], None]
 
@@ -113,6 +115,20 @@ class Assistant:
             self.dispatcher.register(learned.make_intent(phrase, steps))
             self._emit("info", f"Выучена команда: «{phrase}»")
 
+    def _reload_config(self) -> None:
+        """Перечитывает config.yaml и выученные команды без перезапуска."""
+        self.config = Config.load()
+        self.context.config = self.config
+        self.context.allow_shell = bool(self.config.get("ai.allow_shell", True))
+        self.dispatcher = Dispatcher(self.context)
+        self.dispatcher.register_all(build_intents(self.config))
+        self.dispatcher.register_all(learned.build_intents())
+        self.wake_words = [w.lower() for w in
+                           self.config.get("assistant.wake_words", ["миса"])]
+        self.timeout = float(self.config.get("assistant.listen_timeout", 8))
+        self._emit("info", "Настройки перезагружены")
+        self.context.say("Настройки перезагружены")
+
     def stop(self) -> None:
         self._stop = True
 
@@ -151,7 +167,10 @@ class Assistant:
                     self._emit("status", "sleep")
                 continue
 
-            if self.dispatcher.handle(command):
+            if any(p in command for p in _RELOAD_PHRASES):
+                self._emit("status", "work")
+                self._reload_config()
+            elif self.dispatcher.handle(command):
                 self._emit("status", "work")
             elif self.brain is not None:
                 self._run_brain(command)
