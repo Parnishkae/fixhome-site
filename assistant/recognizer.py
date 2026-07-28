@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ctypes
 import json
+import os
 import queue
 import sys
 from pathlib import Path
@@ -11,6 +13,25 @@ import sounddevice as sd
 from vosk import KaldiRecognizer, Model, SetLogLevel
 
 SetLogLevel(-1)  # приглушаем внутренние логи Vosk
+
+
+def _native_model_path(path: Path) -> str:
+    """Путь, который умеет открыть C++-движок Vosk.
+
+    Vosk не открывает файлы по путям с не-ASCII символами (например, если
+    имя пользователя Windows написано кириллицей). Берём «короткое» имя
+    пути 8.3 (C:\\Users\\DANKA~1\\...), оно всегда в ASCII.
+    """
+    p = str(path)
+    if os.name != "nt":
+        return p
+    try:
+        buf = ctypes.create_unicode_buffer(4096)
+        if ctypes.windll.kernel32.GetShortPathNameW(p, buf, 4096):
+            return buf.value
+    except Exception:
+        pass
+    return p
 
 
 def list_microphones() -> str:
@@ -41,7 +62,15 @@ class SpeechRecognizer:
             )
         self.sample_rate = sample_rate
         self.input_device = input_device
-        self._model = Model(str(model_path))
+        native_path = _native_model_path(model_path)
+        if not native_path.isascii():
+            raise FileNotFoundError(
+                "Путь к модели содержит кириллицу (например, имя пользователя),\n"
+                f"а движок Vosk такие пути открыть не может:\n  {native_path}\n"
+                "Перенеси проект в папку без русских букв, например C:\\misa,\n"
+                "и переустанови (install.bat) там."
+            )
+        self._model = Model(native_path)
         self._rec = KaldiRecognizer(self._model, sample_rate)
         self._audio_q: "queue.Queue[bytes]" = queue.Queue()
 
