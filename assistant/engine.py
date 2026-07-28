@@ -16,6 +16,7 @@ from . import learned, memory
 from .config import Config
 from .dispatcher import Context, Dispatcher
 from .executor import run_steps
+from .plugins_loader import load_plugins
 from .recognizer import SpeechRecognizer
 from .skills import build_intents
 from .tts import Speaker
@@ -78,6 +79,14 @@ class Assistant:
         self.dispatcher.register_all(build_intents(config))
         self.dispatcher.register_all(learned.build_intents())
 
+        # Плагины из папки plugins/ (команды + промпты для ИИ).
+        self.plugins = load_plugins(config)
+        self.dispatcher.register_all(self.plugins.intents)
+        for err in self.plugins.errors:
+            self._emit("info", f"Плагин с ошибкой — {err}")
+        if self.plugins.intents:
+            self._emit("info", f"Плагинов подключено: {len(self.plugins.intents)} команд")
+
         self.brain = self._init_brain()
 
         self.wake_words = [w.lower() for w in
@@ -96,7 +105,9 @@ class Assistant:
             return None
         try:
             from .brain import Brain
-            brain = Brain(self.config)
+            extra_prompt = "\n".join(getattr(self, "plugins").prompts) \
+                if getattr(self, "plugins", None) else ""
+            brain = Brain(self.config, extra_prompt=extra_prompt)
             self._emit("info", f"Мозг подключён: {brain.provider} / {brain.model}")
             return brain
         except Exception as exc:
@@ -139,10 +150,13 @@ class Assistant:
         self.dispatcher = Dispatcher(self.context)
         self.dispatcher.register_all(build_intents(self.config))
         self.dispatcher.register_all(learned.build_intents())
+        self.plugins = load_plugins(self.config)
+        self.dispatcher.register_all(self.plugins.intents)
+        self.brain = self._init_brain()  # подхватить новые промпты плагинов
         self.wake_words = [w.lower() for w in
                            self.config.get("assistant.wake_words", ["миса"])]
         self.timeout = float(self.config.get("assistant.listen_timeout", 8))
-        self._emit("info", "Настройки перезагружены")
+        self._emit("info", "Настройки и плагины перезагружены")
         self.context.say("Настройки перезагружены")
 
     def stop(self) -> None:

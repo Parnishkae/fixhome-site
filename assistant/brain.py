@@ -127,7 +127,7 @@ def _extract_json(text: str) -> dict:
 
 
 class Brain:
-    def __init__(self, config):
+    def __init__(self, config, extra_prompt: str = ""):
         from openai import OpenAI  # импорт только когда ИИ реально включён
 
         secrets = config.load_secrets()
@@ -151,6 +151,8 @@ class Brain:
         scenarios = list(config.section("scenarios").keys())
         self._system = SYSTEM_PROMPT + "\n" + _capabilities_block(
             apps, sites, scenarios)
+        if extra_prompt and extra_prompt.strip():
+            self._system += "\n\nДополнительно от плагинов:\n" + extra_prompt.strip()
         self._history: list[dict] = []  # короткая память диалога
 
         # --- Зрение (мультимодальная модель) ---
