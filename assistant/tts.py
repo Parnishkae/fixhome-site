@@ -93,10 +93,65 @@ class Sapi5Backend:
         self._engine.runAndWait()
 
 
+class EdgeBackend:
+    """Онлайн-голоса Microsoft (edge-tts). Естественно, бесплатно, без ключей.
+
+    Питчем можно поднять голос до «анимешного». Нужен интернет.
+    """
+
+    def __init__(self, voice: str = "ru-RU-SvetlanaNeural",
+                 rate: str = "+0%", pitch: str = "+0Hz"):
+        import edge_tts  # noqa: F401 — проверяем, что библиотека есть
+        import miniaudio  # noqa: F401 — декодер mp3
+        self._voice = voice
+        self._rate = rate
+        self._pitch = pitch
+
+    def speak(self, text: str) -> None:
+        import asyncio
+
+        import edge_tts
+        import miniaudio
+        import numpy as np
+        import sounddevice as sd
+
+        async def _synth() -> bytes:
+            comm = edge_tts.Communicate(text, self._voice,
+                                        rate=self._rate, pitch=self._pitch)
+            buf = bytearray()
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    buf += chunk["data"]
+            return bytes(buf)
+
+        mp3 = asyncio.run(_synth())
+        if not mp3:
+            return
+        decoded = miniaudio.decode(mp3)  # int16 PCM
+        samples = np.array(decoded.samples, dtype=np.int16)
+        if decoded.nchannels > 1:
+            samples = samples.reshape(-1, decoded.nchannels)
+        sd.play(samples, decoded.sample_rate)
+        sd.wait()
+
+
 def _build_backend(config):
-    """Создаёт движок по конфигу с откатом silero -> sapi5 -> None."""
+    """Создаёт движок по конфигу с откатом edge -> silero -> sapi5 -> None."""
     tts = config.section("tts")
-    engine = str(tts.get("engine", "silero")).lower()
+    engine = str(tts.get("engine", "edge")).lower()
+
+    if engine == "edge":
+        try:
+            backend = EdgeBackend(
+                voice=tts.get("edge_voice", "ru-RU-SvetlanaNeural"),
+                rate=tts.get("edge_rate", "+0%"),
+                pitch=tts.get("edge_pitch", "+0Hz"),
+            )
+            print(f"[tts] Голос: edge-tts ({tts.get('edge_voice', 'ru-RU-SvetlanaNeural')})")
+            return backend
+        except Exception as exc:
+            print(f"[tts] edge-tts недоступен ({exc}). Пробую Silero.")
+            engine = "silero"
 
     if engine == "silero":
         try:

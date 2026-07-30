@@ -38,10 +38,18 @@ speech:
 
 # --- Синтез речи (озвучка ответов) ---
 tts:
-  # Движок: "silero" — красивый нейросетевой голос (офлайн, нужен torch и
-  # модель, ставится через install-voice.bat); "sapi5" — системный голос
-  # Windows (быстро, но роботно).
-  engine: "silero"
+  # Движок:
+  #   "edge"   — онлайн-голоса Microsoft: естественно, надёжно, без обрывов,
+  #              можно поднять питч до «анимешного» (нужен интернет). Рекоменд.
+  #   "silero" — офлайн нейросетевой (torch + модель, install-voice.bat)
+  #   "sapi5"  — системный голос Windows (роботно)
+  engine: "edge"
+
+  # -- Настройки edge-tts («анимешный» пресет: высокий милый голос) --
+  # Женские русские голоса: ru-RU-SvetlanaNeural, ru-RU-DariyaNeural
+  edge_voice: "ru-RU-SvetlanaNeural"
+  edge_pitch: "+25Hz"    # выше = «анимешнее»/милее (попробуй +15..+45Hz)
+  edge_rate: "+10%"      # чуть быстрее = живее (напр. +0%..+20%)
 
   # -- Настройки Silero --
   silero_model: "models/silero/v4_ru.pt"
