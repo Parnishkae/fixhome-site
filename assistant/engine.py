@@ -28,6 +28,10 @@ _RELOAD_PHRASES = ("перезагрузи настройки", "обнови н
 _FORGET_PHRASES = ("забудь всё", "забудь все", "очисти память", "сотри память")
 _AGENT_PHRASES = ("выполни задачу", "сделай по шагам", "по шагам", "реши задачу",
                   "выполни цепочку", "сделай следующее")
+_TEACH_PHRASES = ("выучи команду", "запомни команду", "научись команде",
+                  "научи команду", "хочу тебя научить", "давай научу тебя",
+                  "новая команда")
+_CANCEL_PHRASES = ("отмена", "отмени", "не надо", "забудь это")
 _VISION_PHRASES = (
     "на экране", "что это", "что тут", "что здесь", "посмотри", "прочитай",
     "переведи", "опиши экран", "что открыто", "что видишь", "нажми на",
@@ -66,6 +70,7 @@ class Assistant:
         self.config = config
         self._on_event = on_event or (lambda kind, text: None)
         self._stop = False
+        self._teach = None  # состояние интерактивного обучения командам
 
         self.speaker = Speaker(config)
         self.recognizer = SpeechRecognizer(
@@ -147,6 +152,52 @@ class Assistant:
         # ИИ сам решил, что это многошаговая задача — запускаем агента.
         if result.get("agent") is True:
             self._run_agent(command)
+
+    def _enter_teach(self) -> None:
+        """Начинает интерактивное обучение новой команде."""
+        if self.brain is None:
+            self.context.say("Для обучения действиям нужен ИИ. Включи его")
+            return
+        self._teach = {"stage": "phrase"}
+        self.context.say("Давай научу. Скажи фразу-команду, которую запомнить")
+
+    def _handle_teach(self, command: str) -> None:
+        """Ведёт диалог обучения: сначала фраза, потом действие."""
+        if any(p in command for p in _CANCEL_PHRASES):
+            self._teach = None
+            self.context.say("Хорошо, отменила обучение")
+            return
+
+        stage = self._teach.get("stage")
+        if stage == "phrase":
+            phrase = command.strip()
+            if not phrase:
+                self.context.say("Не расслышала фразу. Повтори команду")
+                return
+            self._teach = {"stage": "action", "phrase": phrase}
+            self.context.say(
+                f"Поняла, команда «{phrase}». Теперь скажи, что мне по ней делать")
+            return
+
+        if stage == "action":
+            phrase = self._teach["phrase"]
+            self._emit("status", "think")
+            try:
+                steps = self.brain.to_steps(command)
+            except Exception as exc:
+                print(f"[teach] {exc}")
+                self.context.say(_short_ai_error(exc))
+                self._teach = None
+                return
+            if not steps:
+                self.context.say(
+                    "Не смогла разобрать действие. Опиши иначе или скажи «отмена»")
+                return
+            learned.save_command(phrase, steps)
+            self.dispatcher.register(learned.make_intent(phrase, steps))
+            self._teach = None
+            self._emit("info", f"Выучена команда: «{phrase}»")
+            self.context.say(f"Запомнила! Теперь по команде «{phrase}» я всё сделаю")
 
     def _exec_agent_action(self, action: dict) -> str:
         """Выполняет одно действие агента и возвращает наблюдение (текст)."""
@@ -262,6 +313,9 @@ class Assistant:
                     continue
             elif now < active_until:
                 command = phrase
+            elif self._teach is not None:
+                # Во время обучения ловим фразы и без имени, без таймаута.
+                command = phrase
             else:
                 if status != "sleep":
                     status = "sleep"
@@ -270,7 +324,12 @@ class Assistant:
 
             wants_vision = any(p in command for p in _VISION_PHRASES)
 
-            if any(p in command for p in _FORGET_PHRASES):
+            if self._teach is not None:
+                # Идёт обучение — следующая фраза это ответ на вопрос обучения.
+                self._handle_teach(command)
+            elif any(p in command for p in _TEACH_PHRASES):
+                self._enter_teach()
+            elif any(p in command for p in _FORGET_PHRASES):
                 self._emit("status", "work")
                 memory.clear()
                 self.context.say("Хорошо, всё забыла")

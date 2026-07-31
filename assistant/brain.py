@@ -270,6 +270,22 @@ class Brain:
         ]})
         return self._complete(messages, self.vision_model)
 
+    def to_steps(self, description: str) -> list:
+        """Преобразует устное описание действия в список шагов (для обучения)."""
+        instruction = (
+            "Пользователь описывает действие для команды. Верни СТРОГО JSON "
+            '{"steps": [ {"type":..., "value":...}, ... ]} — шаги для выполнения '
+            "этого на Windows. Типы: app, site, search, key, type, shell, wait, "
+            "click, scroll, say. Без пояснений, только JSON."
+        )
+        messages = [
+            {"role": "system", "content": self._system + "\n" + instruction},
+            {"role": "user", "content": description},
+        ]
+        data = self._complete(messages, self.model)
+        steps = data.get("steps") or data.get("actions") or []
+        return steps if isinstance(steps, list) else []
+
     def agent_step(self, goal: str, log: list[dict],
                    screenshot_uri: str | None = None) -> dict:
         """Один шаг автономного агента.
