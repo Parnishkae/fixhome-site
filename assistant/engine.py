@@ -56,8 +56,9 @@ def _short_ai_error(exc: Exception) -> str:
     text = str(exc).lower()
     if any(s in text for s in ("429", "quota", "resource_exhausted", "rate limit")):
         return "Закончился лимит запросов к ИИ. Попробуй позже или смени провайдера"
-    if any(s in text for s in ("model not found", "does not exist", "404")):
-        return "Модель ИИ недоступна. Проверь настройки ключа"
+    if any(s in text for s in ("model not found", "does not exist", "404",
+                               "decommission", "not supported")):
+        return "Модель ИИ недоступна. Запусти list models и выбери другую в настройках"
     if "401" in text or "api key" in text or ("invalid" in text and "key" in text):
         return "Ключ ИИ не принят. Проверь его в настройках"
     if any(s in text for s in ("connect", "timeout", "getaddrinfo")):
@@ -126,7 +127,13 @@ class Assistant:
         try:
             if vision and self.brain.has_vision:
                 self._emit("info", "Смотрю на экран…")
-                result = self.brain.look(command)
+                try:
+                    result = self.brain.look(command)
+                except Exception as vexc:
+                    # Vision-модель недоступна — не падаем, отвечаем без экрана.
+                    print(f"[ai] зрение недоступно: {vexc}")
+                    self._emit("info", "Зрение недоступно, отвечаю без экрана")
+                    result = self.brain.think(command)
             else:
                 result = self.brain.think(command)
         except Exception as exc:
@@ -152,6 +159,25 @@ class Assistant:
         # ИИ сам решил, что это многошаговая задача — запускаем агента.
         if result.get("agent") is True:
             self._run_agent(command)
+
+    def _activate_persona(self, command: str) -> bool:
+        """Переключает «режим» ИИ голосом. True — если что-то переключили."""
+        if self.brain is None:
+            return False
+        if any(w in command for w in ("обычный режим", "сбрось режим",
+                                      "сброс режима", "отключи режим",
+                                      "выключи режим")):
+            self.brain.set_persona("")
+            self.context.say("Вернулась в обычный режим")
+            return True
+        prompts = self.config.section("prompts")
+        for name, text in prompts.items():
+            if str(name).lower() in command:
+                self.brain.set_persona(str(text))
+                self._emit("info", f"Режим: {name}")
+                self.context.say(f"Включила: {name}")
+                return True
+        return False
 
     def _enter_teach(self) -> None:
         """Начинает интерактивное обучение новой команде."""
@@ -332,6 +358,8 @@ class Assistant:
             if self._teach is not None:
                 # Идёт обучение — следующая фраза это ответ на вопрос обучения.
                 self._handle_teach(command)
+            elif "режим" in command and self._activate_persona(command):
+                pass  # переключили режим ИИ
             elif any(p in command for p in _TEACH_PHRASES):
                 self._enter_teach()
             elif any(p in command for p in _FORGET_PHRASES):

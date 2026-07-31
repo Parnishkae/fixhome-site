@@ -209,6 +209,7 @@ class Brain:
         if extra_prompt and extra_prompt.strip():
             self._system += "\n\nДополнительно от плагинов:\n" + extra_prompt.strip()
         self._history: list[dict] = []  # короткая память диалога
+        self._persona = ""              # активный «режим» (промпт-пресет)
 
         # --- Зрение (мультимодальная модель) ---
         self.vision_enabled = bool(config.get("ai.vision.enabled", True))
@@ -231,12 +232,18 @@ class Brain:
             data = {"say": content or "Не поняла", "actions": [], "learn": None}
         return data
 
+    def set_persona(self, text: str) -> None:
+        """Устанавливает активный «режим» (доп. характер/специализацию ИИ)."""
+        self._persona = text or ""
+
     def _system_messages(self, extra: str = "") -> list[dict]:
-        """Системные сообщения: правила + актуальная память о пользователе."""
+        """Системные сообщения: правила + режим + память о пользователе."""
         from . import memory
 
         content = self._system + (("\n" + extra) if extra else "")
         msgs = [{"role": "system", "content": content}]
+        if self._persona:
+            msgs.append({"role": "system", "content": "Режим: " + self._persona})
         mem = memory.as_prompt()
         if mem:
             msgs.append({"role": "system", "content": mem})
