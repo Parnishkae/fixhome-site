@@ -28,21 +28,44 @@ def run_shell_capture(command: str, timeout: int = 30) -> str:
 
 
 def open_app(config, key_or_cmd: str) -> str:
-    """Открывает программу по ключу из config.apps или как сырую команду.
-
-    Если значение — путь к существующему файлу (даже с пробелами, напр.
-    ...\\Opera GX\\opera.exe), запускаем его напрямую, чтобы пробелы в пути
-    не ломали команду.
+    """Открывает программу. Порядок поиска:
+    1) ключ из config.apps (если прописан явно);
+    2) путь к существующему файлу (запуск напрямую, пробелы не ломают);
+    3) автопоиск установленной программы по названию (ярлыки меню «Пуск»);
+    4) как есть — через shell.
     """
     apps = config.section("apps")
-    command = apps.get(key_or_cmd.strip(), key_or_cmd.strip())
+    raw = key_or_cmd.strip()
 
-    path = command.strip().strip('"')
-    if os.path.isfile(path) and hasattr(os, "startfile"):
-        os.startfile(path)  # Windows: корректно открывает путь с пробелами
-    else:
-        run_shell(command)
-    return key_or_cmd
+    # 1) явно прописанная программа
+    if raw in apps:
+        command = apps[raw]
+        path = command.strip().strip('"')
+        if os.path.isfile(path) and hasattr(os, "startfile"):
+            os.startfile(path)
+        else:
+            run_shell(command)
+        return raw
+
+    # 2) сразу путь к файлу
+    if os.path.isfile(raw) and hasattr(os, "startfile"):
+        os.startfile(raw)
+        return raw
+
+    # 3) автопоиск среди установленных программ (по названию)
+    if hasattr(os, "startfile"):
+        try:
+            from .appfinder import find_app
+            found = find_app(raw)
+            if found:
+                os.startfile(found)
+                return raw
+        except Exception:
+            pass
+
+    # 4) последняя попытка — запустить как команду
+    run_shell(raw)
+    return raw
 
 
 def search_web(query: str) -> str:

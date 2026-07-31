@@ -267,6 +267,11 @@ class Assistant:
     def _reload_config(self) -> None:
         """Перечитывает config.yaml и выученные команды без перезапуска."""
         self.config = Config.load()
+        try:
+            from . import appfinder
+            appfinder.refresh()  # перечитать список установленных программ
+        except Exception:
+            pass
         self.context.config = self.config
         self.context.allow_shell = bool(self.config.get("ai.allow_shell", True))
         self.dispatcher = Dispatcher(self.context)
