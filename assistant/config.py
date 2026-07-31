@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-# Корень проекта = папка на уровень выше пакета assistant/
-ROOT = Path(__file__).resolve().parent.parent
+# Корень проекта. В собранном .exe (PyInstaller) — папка рядом с exe, чтобы
+# config.yaml, secrets.yaml, data/, plugins/, models/ лежали рядом и правились.
+if getattr(sys, "frozen", False):
+    ROOT = Path(sys.executable).resolve().parent
+else:
+    ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = ROOT / "config.yaml"
 # Секреты (API-ключи) — отдельный файл, НЕ попадает в git (.gitignore).
 SECRETS_PATH = ROOT / "secrets.yaml"

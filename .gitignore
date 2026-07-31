@@ -5,6 +5,10 @@ venv/
 # Скачанная модель Vosk (большая, качается install.bat)
 models/
 
+# Сборка PyInstaller
+build/
+dist/
+
 # Python
 __pycache__/
 *.py[cod]
