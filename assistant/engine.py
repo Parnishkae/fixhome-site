@@ -9,6 +9,7 @@ kind:  "status" (sleep|listen|think|work) | "heard" | "say" | "info"
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Callable
 
@@ -72,6 +73,7 @@ class Assistant:
         self._on_event = on_event or (lambda kind, text: None)
         self._stop = False
         self._teach = None  # состояние интерактивного обучения командам
+        self._cmd_lock = threading.Lock()  # команды из сети vs голоса
 
         self.speaker = Speaker(config)
         self.recognizer = self._make_recognizer(config)
@@ -96,6 +98,23 @@ class Assistant:
         self.wake_words = [w.lower() for w in
                            config.get("assistant.wake_words", ["миса"])]
         self.timeout = float(config.get("assistant.listen_timeout", 8))
+
+        self._server = None
+        self._maybe_start_server()
+
+    def _maybe_start_server(self) -> None:
+        """Поднимает сетевой сервер для телефона, если включён в конфиге."""
+        if not self.config.get("phone.enabled", False):
+            return
+        try:
+            from .server import start_server
+            secrets = self.config.load_secrets()
+            token = secrets.get("phone_token") or self.config.get("phone.token") or ""
+            port = int(self.config.get("phone.port", 8756))
+            self._server = start_server(
+                self, port, token, on_info=lambda m: self._emit("info", m))
+        except Exception as exc:
+            self._emit("info", f"Сервер для телефона не запущен: {exc}")
 
     def _make_recognizer(self, config):
         """Выбирает распознаватель речи: whisper (точнее, онлайн) или vosk."""
@@ -382,36 +401,49 @@ class Assistant:
                     self._emit("status", "sleep")
                 continue
 
-            wants_vision = any(p in command for p in _VISION_PHRASES)
-
-            if self._teach is not None:
-                # Идёт обучение — следующая фраза это ответ на вопрос обучения.
-                self._handle_teach(command)
-            elif "режим" in command and self._activate_persona(command):
-                pass  # переключили режим ИИ
-            elif any(p in command for p in _TEACH_PHRASES):
-                self._enter_teach()
-            elif any(p in command for p in _FORGET_PHRASES):
-                self._emit("status", "work")
-                memory.clear()
-                self.context.say("Хорошо, всё забыла")
-            elif any(p in command for p in _AGENT_PHRASES) and self.brain is not None:
-                self._run_agent(command)
-            elif any(p in command for p in _RELOAD_PHRASES):
-                self._emit("status", "work")
-                self._reload_config()
-            elif wants_vision and self.brain is not None and self.brain.has_vision:
-                # «Экранные» команды идут в зрение, минуя встроенные навыки.
-                self._run_brain(command, vision=True)
-            elif self.dispatcher.handle(command):
-                self._emit("status", "work")
-            elif self.brain is not None:
-                self._run_brain(command)
-            else:
-                self.context.say("Не поняла команду. Включи ИИ для свободной речи")
+            self._dispatch_command(command)
 
             active_until = now + self.timeout
             status = "listen"
             self._emit("status", "listen")
 
         self.speaker.stop()
+
+    def _dispatch_command(self, command: str) -> None:
+        """Разбирает и выполняет одну команду (общее для голоса и сети)."""
+        wants_vision = any(p in command for p in _VISION_PHRASES)
+
+        if self._teach is not None:
+            self._handle_teach(command)
+        elif "режим" in command and self._activate_persona(command):
+            pass  # переключили режим ИИ
+        elif any(p in command for p in _TEACH_PHRASES):
+            self._enter_teach()
+        elif any(p in command for p in _FORGET_PHRASES):
+            self._emit("status", "work")
+            memory.clear()
+            self.context.say("Хорошо, всё забыла")
+        elif any(p in command for p in _AGENT_PHRASES) and self.brain is not None:
+            self._run_agent(command)
+        elif any(p in command for p in _RELOAD_PHRASES):
+            self._emit("status", "work")
+            self._reload_config()
+        elif wants_vision and self.brain is not None and self.brain.has_vision:
+            self._run_brain(command, vision=True)
+        elif self.dispatcher.handle(command):
+            self._emit("status", "work")
+        elif self.brain is not None:
+            self._run_brain(command)
+        else:
+            self.context.say("Не поняла команду. Включи ИИ для свободной речи")
+
+    def process_text(self, command: str) -> str:
+        """Выполняет текстовую команду (напр. с телефона) и возвращает ответ
+        текстом. Потокобезопасно относительно голосового цикла."""
+        command = (command or "").strip().lower()
+        if not command:
+            return ""
+        with self._cmd_lock:
+            with self.context.capture() as collected:
+                self._dispatch_command(command)
+            return "\n".join(collected).strip()

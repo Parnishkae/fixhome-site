@@ -27,8 +27,14 @@ class Context:
         self.allow_shell = bool(config.get("ai.allow_shell", True))
         # Необязательный хук: интерфейс (окно) получает произнесённый текст.
         self.on_say = None
+        self._capture_list = None  # активный сбор ответов (для команд из сети)
 
     def say(self, text: str) -> str:
+        # Если идёт «захват» (команда с телефона) — собираем текст и не
+        # озвучиваем на ПК.
+        if self._capture_list is not None:
+            self._capture_list.append(text)
+            return text
         self.speaker.say(text)
         if self.on_say:
             try:
@@ -36,6 +42,22 @@ class Context:
             except Exception:
                 pass
         return text
+
+    def capture(self):
+        """Контекст-менеджер: собирает ответы say() в список вместо озвучки."""
+        ctx = self
+
+        class _Capture:
+            def __enter__(self_inner):
+                self_inner.items = []
+                ctx._capture_list = self_inner.items
+                return self_inner.items
+
+            def __exit__(self_inner, *exc):
+                ctx._capture_list = None
+                return False
+
+        return _Capture()
 
 
 class Dispatcher:
