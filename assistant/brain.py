@@ -211,16 +211,23 @@ class Brain:
         self._history: list[dict] = []  # короткая память диалога
         self._persona = ""              # активный «режим» (промпт-пресет)
 
-        # --- Зрение (мультимодальная модель) ---
-        self.vision_enabled = bool(config.get("ai.vision.enabled", True))
+        # --- Зрение (мультимодальная модель, м.б. другой провайдер) ---
+        self.vision_enabled = bool(config.get("ai.vision.enabled", False))
+        vis_provider = str(config.get("ai.vision.provider", "") or provider).lower()
+        if vis_provider == provider:
+            self._vision_client = self._client
+        else:
+            vpreset = PROVIDERS.get(vis_provider, preset)
+            vkey = "ollama" if vis_provider == "ollama" else api_key
+            self._vision_client = OpenAI(base_url=vpreset["base_url"], api_key=vkey)
         self.vision_model = (config.get("ai.vision.model")
-                             or VISION_MODELS.get(provider) or self.model)
+                             or VISION_MODELS.get(vis_provider) or self.model)
         self.vision_max_width = int(config.get("ai.vision.max_width", 1280))
         self.has_vision = self.vision_enabled and bool(self.vision_model)
 
-    def _complete(self, messages: list, model: str) -> dict:
-        """Запрос к модели + разбор JSON + запись в память диалога."""
-        resp = self._client.chat.completions.create(
+    def _complete(self, messages: list, model: str, client=None) -> dict:
+        """Запрос к модели + разбор JSON. client=None -> основной клиент."""
+        resp = (client or self._client).chat.completions.create(
             model=model,
             messages=messages,
             temperature=self.temperature,
@@ -275,7 +282,7 @@ class Brain:
             {"type": "text", "text": user_text},
             {"type": "image_url", "image_url": {"url": data_uri}},
         ]})
-        return self._complete(messages, self.vision_model)
+        return self._complete(messages, self.vision_model, client=self._vision_client)
 
     def to_steps(self, description: str) -> list:
         """Преобразует устное описание действия в список шагов (для обучения)."""
@@ -318,9 +325,7 @@ class Brain:
                 {"type": "text", "text": user_text},
                 {"type": "image_url", "image_url": {"url": screenshot_uri}},
             ]})
-            model = self.vision_model
-        else:
-            messages.append({"role": "user", "content": user_text})
-            model = self.model
-
-        return self._complete(messages, model)
+            return self._complete(messages, self.vision_model,
+                                  client=self._vision_client)
+        messages.append({"role": "user", "content": user_text})
+        return self._complete(messages, self.model)

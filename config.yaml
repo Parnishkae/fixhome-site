@@ -26,11 +26,21 @@ assistant:
   # Отвечать голосом на действия (True) или молча выполнять (False).
   speak_responses: true
 
-# --- Распознавание речи (Vosk, офлайн) ---
+# --- Распознавание речи ---
 speech:
-  # Путь к скачанной модели Vosk (см. README, раздел «Установка»).
-  # По умолчанию — папка models/ рядом с проектом.
+  # Движок: "whisper" — точнее, онлайн (через твой провайдер, напр. Groq);
+  #         "vosk"    — офлайн, менее точный.
+  engine: "whisper"
+
+  # -- Whisper (онлайн) --
+  whisper_model: "whisper-large-v3-turbo"
+  language: "ru"
+  vad_threshold: 500     # порог громкости для детекции речи (тише фон — меньше)
+  silence_sec: 0.8       # пауза, после которой фраза считается законченной
+
+  # -- Vosk (офлайн, запасной) --
   model_path: "models/vosk-model-small-ru-0.22"
+
   sample_rate: 16000
   # Индекс микрофона (null = системный по умолчанию).
   # Список устройств покажет:  python -m assistant.main --list-mics
@@ -76,8 +86,9 @@ ai:
   # выключено. Включи (enabled: true) и укажи model, если есть мультимодальный
   # доступ: локально Ollama (llama3.2-vision), либо платные Gemini/OpenAI.
   vision:
-    enabled: false
-    model: ""            # напр. "llama3.2-vision" для Ollama
+    enabled: false       # включи true, когда настроишь Ollama (см. ниже)
+    provider: ""         # пусто = тот же, что основной. Для локального зрения: "ollama"
+    model: ""            # для Ollama: "llama3.2-vision"
     max_width: 1280      # ширина, до которой ужимается скриншот
 
   # Автономный агент: «выполни задачу …» — делает её по шагам с проверкой.

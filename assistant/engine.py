@@ -74,11 +74,7 @@ class Assistant:
         self._teach = None  # состояние интерактивного обучения командам
 
         self.speaker = Speaker(config)
-        self.recognizer = SpeechRecognizer(
-            model_path=config.resolve_path("speech.model_path"),
-            sample_rate=config.get("speech.sample_rate", 16000),
-            input_device=config.get("speech.input_device"),
-        )
+        self.recognizer = self._make_recognizer(config)
         # Ответы помощника (через Context.say) дублируем в интерфейс.
         self.context = Context(config, self.speaker)
         self.context.on_say = lambda text: self._emit("say", text)
@@ -100,6 +96,39 @@ class Assistant:
         self.wake_words = [w.lower() for w in
                            config.get("assistant.wake_words", ["миса"])]
         self.timeout = float(config.get("assistant.listen_timeout", 8))
+
+    def _make_recognizer(self, config):
+        """Выбирает распознаватель речи: whisper (точнее, онлайн) или vosk."""
+        engine = str(config.get("speech.engine", "vosk")).lower()
+        if engine == "whisper":
+            try:
+                from .brain import PROVIDERS
+                from .recognizer_whisper import WhisperRecognizer
+                secrets = config.load_secrets()
+                provider = str(secrets.get("provider", "groq")).lower()
+                preset = PROVIDERS.get(provider, PROVIDERS["groq"])
+                key = secrets.get("api_key") or ""
+                rec = WhisperRecognizer(
+                    base_url=preset["base_url"], api_key=key,
+                    model=config.get("speech.whisper_model", "whisper-large-v3-turbo"),
+                    sample_rate=config.get("speech.sample_rate", 16000),
+                    input_device=config.get("speech.input_device"),
+                    language=config.get("speech.language", "ru"),
+                    vad_threshold=int(config.get("speech.vad_threshold", 500)),
+                    silence_sec=float(config.get("speech.silence_sec", 0.8)),
+                )
+                self._emit("info", f"Распознавание: Whisper ({provider})")
+                return rec
+            except Exception as exc:
+                self._emit("info", f"Whisper недоступен ({exc}). Использую Vosk.")
+
+        rec = SpeechRecognizer(
+            model_path=config.resolve_path("speech.model_path"),
+            sample_rate=config.get("speech.sample_rate", 16000),
+            input_device=config.get("speech.input_device"),
+        )
+        self._emit("info", "Распознавание: Vosk (офлайн)")
+        return rec
 
     # --- события интерфейсу ---
     def _emit(self, kind: str, text: str = "") -> None:
