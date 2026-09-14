@@ -1,0 +1,27 @@
+name: misa_phone
+description: Голосовой помощник для управления телефоном (как Алиса)
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  speech_to_text: ^6.6.0        # распознавание речи
+  flutter_tts: ^3.8.5           # озвучка
+  http: ^1.2.0                  # запрос к ИИ (Groq)
+  shared_preferences: ^2.2.2    # хранение ключа/настроек
+  url_launcher: ^6.2.5          # звонки, смс, сайты, поиск
+  android_intent_plus: ^5.1.0   # будильник, таймер, настройки
+  external_app_launcher: ^4.0.0 # запуск приложений по пакету
+  battery_plus: ^6.0.1          # заряд батареи
+  torch_light: ^1.1.0           # фонарик
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
